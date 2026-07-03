@@ -1,0 +1,6 @@
+<resources>
+    <color name="purple_500">#FF6750A4</color>
+    <color name="purple_200">#FFD0BCFF</color>
+    <color name="widget_background">#FF1C1B1F</color>
+    <color name="widget_text">#FFFFFFFF</color>
+</resources>

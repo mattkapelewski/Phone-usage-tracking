@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">Phone Usage Tracker</string>
+    <string name="select_apps_title">Select Apps</string>
+    <string name="total_usage_today">Total usage today</string>
+    <string name="permission_explanation">To track your phone usage, this app needs the "Usage access" permission. Tap below to grant it in system settings.</string>
+    <string name="grant_access">Grant usage access</string>
+    <string name="widget_placeholder">0m</string>
+    <string name="widget_description">Shows today\'s total phone usage for the apps you choose.</string>
+    <string name="widget_permission_needed">Open app</string>
+    <string name="loading_apps">Loading apps…</string>
+</resources>
