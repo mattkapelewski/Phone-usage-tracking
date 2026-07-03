@@ -46,14 +46,14 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun refresh() {
-        val hasAccess = usageStatsRepository.hasUsageAccess()
-        binding.permissionCard.isVisible = !hasAccess
-        binding.usageContainer.isVisible = hasAccess
-        binding.selectAppsButton.isVisible = hasAccess
-
-        if (!hasAccess) return
-
         lifecycleScope.launch {
+            val hasAccess = withContext(Dispatchers.IO) { usageStatsRepository.hasUsageAccess() }
+            binding.permissionCard.isVisible = !hasAccess
+            binding.usageContainer.isVisible = hasAccess
+            binding.selectAppsButton.isVisible = hasAccess
+
+            if (!hasAccess) return@launch
+
             val totalMillis = withContext(Dispatchers.IO) {
                 val excluded = appPrefsRepository.getExcludedPackagesOnce()
                 usageStatsRepository.getTotalUsageMillisToday(excluded)

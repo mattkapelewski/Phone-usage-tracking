@@ -46,6 +46,9 @@ class UsageWidgetProvider : AppWidgetProvider() {
                 for (id in appWidgetIds) {
                     updateAppWidget(context, appWidgetManager, id, text)
                 }
+            } catch (e: Exception) {
+                // A background widget refresh failing (e.g. a transient UsageStatsManager
+                // error) must not crash the app; it'll simply retry on the next refresh.
             } finally {
                 pendingResult.finish()
             }

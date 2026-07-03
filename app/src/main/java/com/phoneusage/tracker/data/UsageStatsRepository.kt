@@ -8,6 +8,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Process
 import java.util.Calendar
+import java.util.concurrent.TimeUnit
 
 /**
  * Reads per-app foreground time from [UsageStatsManager] and the list of user-facing
@@ -47,7 +48,12 @@ class UsageStatsRepository(context: Context) {
     }
 
     private fun computeForegroundDurations(startTime: Long, endTime: Long): Map<String, Long> {
-        val events = usageStatsManager.queryEvents(startTime, endTime)
+        // Query from further back than startTime so a session that was already in the
+        // foreground at startTime (e.g. an app left open across local midnight) is seen
+        // and its start time can be clamped to startTime, instead of being dropped because
+        // its MOVE_TO_FOREGROUND event falls outside the query window.
+        val lookbackStart = startTime - TimeUnit.HOURS.toMillis(24)
+        val events = usageStatsManager.queryEvents(lookbackStart, endTime)
         val totals = mutableMapOf<String, Long>()
         val foregroundStarts = mutableMapOf<String, Long>()
         val event = UsageEvents.Event()
@@ -60,9 +66,12 @@ class UsageStatsRepository(context: Context) {
                 }
                 UsageEvents.Event.MOVE_TO_BACKGROUND -> {
                     val start = foregroundStarts.remove(event.packageName)
-                    if (start != null && event.timeStamp > start) {
-                        totals[event.packageName] =
-                            (totals[event.packageName] ?: 0L) + (event.timeStamp - start)
+                    if (start != null) {
+                        val clampedStart = maxOf(start, startTime)
+                        if (event.timeStamp > clampedStart) {
+                            totals[event.packageName] =
+                                (totals[event.packageName] ?: 0L) + (event.timeStamp - clampedStart)
+                        }
                     }
                 }
             }
@@ -70,8 +79,9 @@ class UsageStatsRepository(context: Context) {
 
         // Anything still in the foreground when we queried counts up to "now".
         for ((pkg, start) in foregroundStarts) {
-            if (endTime > start) {
-                totals[pkg] = (totals[pkg] ?: 0L) + (endTime - start)
+            val clampedStart = maxOf(start, startTime)
+            if (endTime > clampedStart) {
+                totals[pkg] = (totals[pkg] ?: 0L) + (endTime - clampedStart)
             }
         }
 
