@@ -39,10 +39,16 @@ class UsageStatsRepository(context: Context) {
         return computeForegroundDurations(startOfDay, now)
     }
 
-    /** Total foreground time today across all packages not present in [excludedPackages]. */
+    /**
+     * Total foreground time today, summed only over launchable apps (the same set shown in
+     * the app-selection list) that aren't in [excludedPackages]. Packages the system reports
+     * usage for but that never appear in that list — the home launcher, system UI, etc. — are
+     * deliberately excluded here too, since the user has no way to see or uncheck them.
+     */
     fun getTotalUsageMillisToday(excludedPackages: Set<String>): Long {
+        val launchablePackages = getLaunchablePackageNames()
         return getUsageTodayByPackage()
-            .filterKeys { it !in excludedPackages }
+            .filterKeys { it in launchablePackages && it !in excludedPackages }
             .values
             .sum()
     }
@@ -101,14 +107,7 @@ class UsageStatsRepository(context: Context) {
     /** All apps the user can launch from a home screen / app drawer, excluding this app. */
     fun getLaunchableApps(): List<AppInfo> {
         val pm = appContext.packageManager
-        val launcherIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
-        val resolveInfos = pm.queryIntentActivities(launcherIntent, PackageManager.MATCH_ALL)
-
-        return resolveInfos
-            .asSequence()
-            .map { it.activityInfo.packageName }
-            .distinct()
-            .filter { it != appContext.packageName }
+        return getLaunchablePackageNames()
             .mapNotNull { pkg ->
                 runCatching {
                     val applicationInfo = pm.getApplicationInfo(pkg, 0)
@@ -120,6 +119,15 @@ class UsageStatsRepository(context: Context) {
                 }.getOrNull()
             }
             .sortedBy { it.label.lowercase() }
-            .toList()
+    }
+
+    private fun getLaunchablePackageNames(): Set<String> {
+        val pm = appContext.packageManager
+        val launcherIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+        return pm.queryIntentActivities(launcherIntent, PackageManager.MATCH_ALL)
+            .asSequence()
+            .map { it.activityInfo.packageName }
+            .filter { it != appContext.packageName }
+            .toSet()
     }
 }
